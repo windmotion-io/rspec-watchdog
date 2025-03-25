@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Rspec Watchdogs Dashboard</title>
+    <%= csrf_meta_tags %>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-light: #f4f6f7;
+            --text-dark: #2c3e50;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--background-light);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-dark);
+        }
+        .dashboard {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: scale(1.05);
+        }
+        .metric-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .action-button {
+            display: block;
+            width: 250px;
+            margin: 30px auto;
+            padding: 12px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
+        }
+        .action-button:hover {
+            background-color: #2980b9;
+        }
+
+        .detailed-results {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .results-grid {
+            display: flex;
+            justify-content: space-between;
+        }
+        .results-column {
+            width: 48%;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .results-table th,
+        .results-table td {
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            text-align: left;
+        }
+        .results-table thead {
+            background-color: #f1f3f5;
+        }
+        .results-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <h1>🔍 Rspec Watchdogs Dashboard</h1>
+            <div class="total-metrics">
+                Total Métricas: <%= RspecWatchdogs::Metric.count %>
+                <br>
+                Total Flaky: <%= RspecWatchdogs::Flaky.count %>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">⏱️</div>
+                <div class="metric-value">
+                    <%= RspecWatchdogs::Metric.average(:run_time).to_f.round(3) %>
+                </div>
+                <div class="metric-label">Tiempo Promedio de Ejecución (s)</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">📁</div>
+                <div class="metric-value">
+                    <%= RspecWatchdogs::Metric.distinct.count(:file_path) %>
+                </div>
+                <div class="metric-label">Archivos Únicos Analizados</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">🕹️</div>
+                <div class="metric-value">
+                    <%= RspecWatchdogs::Metric.maximum(:run_time).to_f.round(3) %>
+                </div>
+                <div class="metric-label">Tiempo Máximo de Ejecución (s)</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">📊</div>
+                <div class="metric-value">
+                    <%= RspecWatchdogs::Metric.count %>
+                </div>
+                <div class="metric-label">Total de Métricas Recopiladas</div>
+            </div>
+        </div>
+
+        <% if RspecWatchdogs::Flaky.any? %>
+          <h2 style="text-align: center; color: #e74c3c; margin: 30px 0;">🔥 Flaky Tests Detectados</h2>
+          <div class="metrics-grid">
+              <div class="metric-card">
+                  <div class="metric-icon">🚨</div>
+                  <div class="metric-value">
+                      <%= RspecWatchdogs::Flaky.count %>
+                  </div>
+                  <div class="metric-label">Total Flaky Tests</div>
+              </div>
+
+              <div class="metric-card">
+                  <div class="metric-icon">📍</div>
+                  <div class="metric-value">
+                      <%= RspecWatchdogs::Flaky.distinct.count(:file_path) %>
+                  </div>
+                  <div class="metric-label">Archivos con Flaky Tests</div>
+              </div>
+
+              <div class="metric-card">
+                  <div class="metric-icon">⏱️</div>
+                  <div class="metric-value">
+                      <%= RspecWatchdogs::Flaky.average(:run_time).to_f.round(3) %>
+                  </div>
+                  <div class="metric-label">Tiempo Promedio Flaky (s)</div>
+              </div>
+
+              <div class="metric-card">
+                  <div class="metric-icon">❗</div>
+                  <div class="metric-value">
+                      <%= RspecWatchdogs::Flaky.distinct.count(:error) %>
+                  </div>
+                  <div class="metric-label">Tipos de Errores Únicos</div>
+              </div>
+          </div>
+        <% end %>
+
+        <div class="detailed-results">
+            <div class="results-grid">
+                <div class="results-column">
+                    <h3>🕒 Top 3 Tests más Lentos</h3>
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Tiempo (s)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% RspecWatchdogs::Metric.order(run_time: :desc).limit(3).each do |metric| %>
+                                <tr>
+                                    <td><%= metric.description %></td>
+                                    <td><%= metric.run_time.round(3) %></td>
+                                </tr>
+                            <% end %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="results-column">
+                    <h3>🚨 Top 3 Flaky Tests</h3>
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Archivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% RspecWatchdogs::Flaky.order(created_at: :desc).limit(3).each do |flaky| %>
+                                <tr>
+                                    <td><%= flaky.description %></td>
+                                    <td><%= flaky.file_path %></td>
+                                </tr>
+                            <% end %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

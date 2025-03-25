@@ -3,8 +3,8 @@ require_relative "lib/rspec_watchdogs/version"
 Gem::Specification.new do |spec|
   spec.name        = "rspec_watchdogs"
   spec.version     = RspecWatchdogs::VERSION
-  spec.authors     = [ "AFornio" ]
-  spec.email       = [ "agus16.7@hotmail.com" ]
+  spec.authors       = ["Federico Aldunate", 'Agustin Fornio']
+  spec.email         = ["tech@windmotion.io"]
   spec.summary       = "RSpec performance tracking and metrics"
   spec.description   = "Track RSpec test performance, identify slow tests, and generate metrics"
   spec.homepage      = "https://github.com/windmotion-io/rspec-watchdogs"
@@ -23,4 +23,5 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 7.2.2.1"
+  spec.add_development_dependency "rspec", "~> 3.12"
 end
