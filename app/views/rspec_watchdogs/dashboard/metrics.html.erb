@@ -1,8 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>RSpec Performance Dashboard</title>
     <style>
         body {
             font-family: monospace;
@@ -92,6 +87,17 @@
             color: rgb(250, 204, 21);
             text-align: center;
         }
+        .section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .section ul li {
+            border-bottom: 1px solid rgb(55, 65, 81);
+            padding: 0.5rem 0;
+        }
+        .section ul li:last-child {
+            border-bottom: none;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -132,13 +138,18 @@
             margin: 30px 0;
             font-size: 1.25rem;
         }
+        .percentile-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div>
-                <span class="title">RSpec Watchdogs Dashboard</span>
+                <span class="title">🔍 Rspec Watchdogs Dashboard</span>
                 <span class="version">v<%= RspecWatchdogs::VERSION %>-alpha</span>
             </div>
             <div class="last-scan">
@@ -148,70 +159,105 @@
 
         <div class="summary-grid">
             <div class="summary-card">
-                <h3>🕒 Avg Execution Time</h3>
-                <div class="value"><%= RspecWatchdogs::Metric.average(:run_time).to_f.round(3) %>s</div>
-                <div class="trend">Test Performance</div>
+                <h3>📊 Total Tests</h3>
+                <div class="value"><%= @total_tests %></div>
+                <div class="trend">All Tests</div>
             </div>
             <div class="summary-card">
-                <h3>📁 Unique Files</h3>
-                <div class="value"><%= RspecWatchdogs::Metric.distinct.count(:file_path) %></div>
-                <div class="trend">Analyzed Files</div>
+                <h3>✅ Passed Tests</h3>
+                <div class="value"><%= @passed_percentage %>%</div>
+                <div class="trend">Passing Rate</div>
             </div>
             <div class="summary-card">
-                <h3>🚨 Flaky Tests</h3>
-                <div class="value"><%= RspecWatchdogs::Flaky.count %></div>
-                <div class="trend">Total Flaky</div>
+                <h3>🕒 Avg Execution</h3>
+                <div class="value"><%= sprintf('%.4f', @average_time) %>s</div>
+                <div class="trend">Test Duration</div>
             </div>
             <div class="summary-card">
-                <h3>📊 Total Metrics</h3>
-                <div class="value"><%= RspecWatchdogs::Metric.count %></div>
-                <div class="trend">Collected</div>
+                <h3>❌ Failed Tests</h3>
+                <div class="value"><%= @failed_percentage %>%</div>
+                <div class="trend">Failure Rate</div>
             </div>
         </div>
 
-        <% if RspecWatchdogs::Flaky.any? %>
-            <div class="warning">🔥 Flaky Tests Detected 🔥</div>
+        <% if @failed_tests.any? %>
+            <div class="warning">❌ Failed Tests Detected ❌</div>
         <% end %>
 
         <div class="content-grid">
             <div class="section">
-                <h3>🕒 Top 3 Slowest Tests</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Time (s)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% RspecWatchdogs::Metric.order(run_time: :desc).limit(3).each do |metric| %>
-                            <tr>
-                                <td><%= metric.description %></td>
-                                <td><%= metric.run_time.round(3) %></td>
-                            </tr>
-                        <% end %>
-                    </tbody>
-                </table>
+                <h3>⚡ Fastest vs 🐢 Slowest Test</h3>
+                <ul>
+                    <li>
+                        <strong>Fastest Test:</strong>
+                        <%= @fastest_test.description %>
+                        (Time: <%= sprintf('%.4f', @fastest_test.run_time) %> s)
+                    </li>
+                    <li>
+                        <strong>Slowest Test:</strong>
+                        <%= @slowest_test.description %>
+                        (Time: <%= sprintf('%.4f', @slowest_test.run_time) %> s)
+                    </li>
+                </ul>
             </div>
             <div class="section">
-                <h3>🚨 Top 3 Flaky Tests</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>File</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% RspecWatchdogs::Flaky.order(created_at: :desc).limit(3).each do |flaky| %>
-                            <tr>
-                                <td><%= flaky.description %></td>
-                                <td><%= flaky.file_path %></td>
-                            </tr>
-                        <% end %>
-                    </tbody>
-                </table>
+                <h3>📊 Time Distribution</h3>
+                <ul>
+                    <% @time_distribution_analysis.each do |category, count| %>
+                        <li><%= category %>: <%= count %> tests</li>
+                    <% end %>
+                </ul>
             </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="section percentile-list">
+                <h3>📈 Execution Time Percentiles</h3>
+                <ul>
+                    <% @percentiles.each do |percentile| %>
+                        <li>
+                            <span><%= percentile[:percentile] %>% Percentile</span>
+                            <span><%= sprintf('%.4f', percentile[:run_time]) %> s</span>
+                        </li>
+                    <% end %>
+                </ul>
+            </div>
+            <div class="section">
+                <h3>❌ Failed Tests Details</h3>
+                <ul>
+                    <% @failed_tests.each do |test| %>
+                        <li>
+                            <%= test.description %>
+                            (File: <%= test.file_path %>,
+                            Location: <%= test.location %>)
+                        </li>
+                    <% end %>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📊 Detailed Test Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>File</th>
+                        <th>Location</th>
+                        <th>Execution Time (s)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% @metrics.each do |metric| %>
+                        <tr>
+                            <td><%= metric.description %></td>
+                            <td><%= metric.file_path %></td>
+                            <td><%= metric.location %></td>
+                            <td><%= sprintf('%.4f', metric.run_time) %></td>
+                        </tr>
+                    <% end %>
+                </tbody>
+            </table>
         </div>
 
         <div class="footer">
@@ -221,5 +267,3 @@
             </p>
         </div>
     </div>
-</body>
-</html>
