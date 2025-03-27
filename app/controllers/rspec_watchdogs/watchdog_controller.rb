@@ -15,11 +15,11 @@ module RspecWatchdogs
     private
 
     def metric_params
-      params.require(:metric).permit(:description, :file_path, :location, :run_time)
+      params.require(:metric).permit(:description, :file_path, :location, :run_time, :status, :error_message)
     end
 
     def flaky_params
-      params.require(:flaky).permit(:description, :file_path, :location, :error, :run_time)
+      params.require(:flaky).permit(:description, :file_path, :location, :error, :run_time, :status, :error_message)
     end
 
     def authenticate_token

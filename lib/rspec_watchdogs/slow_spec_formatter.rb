@@ -26,12 +26,15 @@ class SlowSpecFormatter
     # Crear una lista con todos los ejemplos y sus tiempos de ejecución
     all_examples = summary.examples.map do |example|
       {
-        description: example.full_description,
-        file_path: example.metadata[:file_path],
-        location: example.metadata[:location],
-        run_time: example.execution_result.run_time
+        description: example.full_description,               # Descripción de la prueba
+        file_path: example.metadata[:file_path],             # Ruta del archivo de la prueba
+        location: example.metadata[:location],               # Ubicación de la prueba
+        run_time: example.execution_result.run_time,         # Tiempo de ejecución de la prueba
+        status: example.execution_result.status.to_s,        # Estado de la prueba (passed, failed, etc.)
+        error_message: example.execution_result.exception ? example.execution_result.exception.message : nil, # Error si falla
       }
     end
+
     # Ordenar los ejemplos por tiempo de ejecución (de más duraderos a más rápidos)
     sorted_examples = all_examples.sort_by { |ex| -ex[:run_time] }
 
@@ -47,7 +50,6 @@ class SlowSpecFormatter
     failed_tests(summary)
     tests_grouped_by_file(sorted_examples)
     tests_that_tooked_longer_than(sorted_examples, 2.0)
-    number_of_retries(summary)
     time_distribution_analysis(sorted_examples)
     test_stability_analysis(summary)
     execution_time_variance(sorted_examples)
@@ -124,17 +126,6 @@ class SlowSpecFormatter
     end
   end
 
-  def number_of_retries(summary)
-    retries = summary.examples.select { |example| example.execution_result.status == :retried }
-    puts "\n🔁 \e[35mNumber of retries:\e[0m"
-    retries.each do |example|
-      puts "\e[35m#{example.full_description} (#{example.metadata[:file_path]}) - #{example.execution_result.run_time} seconds\e[0m"
-      puts "  📍 Location: #{example.metadata[:location]}"
-      puts "  \e[36mRetry count:\e[0m #{example.execution_result.retry_count}"
-      puts "  \e[31mFailure message:\e[0m #{example.execution_result.exception.message}"
-      puts "  \e[35mBacktrace:\e[0m #{example.execution_result.exception.backtrace.join("\n")}"
-    end
-  end
 
   def time_distribution_analysis(sorted_examples)
     total_tests = sorted_examples.size
@@ -242,22 +233,25 @@ class SlowSpecFormatter
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == "https")
 
-    first_example = sorted_examples.first
-    puts "🌐 Sending data to Analytics API: #{uri}"
-    request = Net::HTTP::Post.new(uri.path, { 'Content-Type' => 'application/json', 'Authorization' => ENV['WATCHDOGS_API_TOKEN'] })
-    request.body = {
-      metric: {
-        description: first_example[:description],
-        file_path: first_example[:file_path],
-        location: first_example[:location],
-        run_time: first_example[:run_time]
-      }
-    }.to_json
+    sorted_examples.each do |example|
+      puts "🌐 Sending data to Analytics API: #{uri}"
+      request = Net::HTTP::Post.new(uri.path, { 'Content-Type' => 'application/json', 'Authorization' => ENV['WATCHDOGS_API_TOKEN'] })
+      request.body = {
+        metric: {
+          description: example[:description],          # Descripción de la prueba
+          file_path: example[:file_path],              # Ruta del archivo
+          location: example[:location],                # Ubicación (línea y método)
+          run_time: example[:run_time],                # Tiempo de ejecución
+          status: example[:status],                    # Estado de la prueba (passed, failed, etc.)
+          error_message: example[:error_message],      # Mensaje de error si la prueba falla
+        }
+      }.to_json
 
-    begin
-      response = http.request(request)
-    rescue StandardError => e
-      puts "Error sending data to API: #{e.message}"
+      begin
+        response = http.request(request)
+      rescue StandardError => e
+        puts "Error sending data to API: #{e.message}"
+      end
     end
   end
 end

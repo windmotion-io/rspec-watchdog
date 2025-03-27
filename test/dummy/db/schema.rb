@@ -17,6 +17,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_25_192955) do
     t.string "location"
     t.string "error"
     t.float "run_time"
+    t.string "status"
+    t.text "error_message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -26,6 +28,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_25_192955) do
     t.string "file_path"
     t.string "location"
     t.float "run_time"
+    t.string "status"
+    t.text "error_message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
