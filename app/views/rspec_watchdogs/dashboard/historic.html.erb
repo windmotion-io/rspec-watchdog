@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <style>
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        .chart-container {
+            background-color: rgba(31, 41, 55, 0.8);
+            border-radius: 0.5rem;
+            border: 1px solid rgb(55, 65, 81);
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .chart-title {
+            text-align: center;
+            color: rgb(250, 204, 21);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        canvas {
+          max-height: 400px;
+        }
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .metrics-table th, .metrics-table td {
+            border: 1px solid rgb(55, 65, 81);
+            padding: 10px;
+            text-align: left;
+        }
+        .metrics-table th {
+            background-color: rgba(31, 41, 55, 0.8);
+            color: rgb(250, 204, 21);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+<div class="chart-container">
+    <h2 class="chart-title">📊 Tests Performance Trend</h2>
+    <p>This graphic shows the trend of test performance over time, tracking changes in performance scores across multiple test runs. It helps identify if there has been an overall improvement or decline in the performance of tests.</p>
+    <canvas id="performanceTrendChart"></canvas>
+</div>
+<script>
+            // Performance Trend Chart
+    const performanceTrendCtx = document.getElementById('performanceTrendChart').getContext('2d');
+    const performanceTrendData = <%= @performance_trend.to_json.html_safe %>;
+    new Chart(performanceTrendCtx, {
+        type: 'line',
+        data: {
+            labels: performanceTrendData.map(item => item.test_date),
+            datasets: [{
+                label: 'Average Run Time (s)',
+                data: performanceTrendData.map(item => item.average_run_time),
+                borderColor: 'rgb(74, 222, 128)',
+                backgroundColor: 'rgba(74, 222, 128, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: 'white' }
+                },
+                x: {
+                    ticks: { color: 'white' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            }
+        }
+    });
+</script>
+
+<div class="chart-container">
+    <h2 class="chart-title">🕒 Run Time Distribution</h2>
+    <p>This chart displays the distribution of test execution times, allowing you to observe how the runtime of tests is spread across different time intervals. It helps highlight tests that take longer than expected or show variations in execution times.</p>
+    <canvas id="runTimeDistributionChart"></canvas>
+</div>
+
+<script>
+
+            // Run Time Distribution Chart
+    const runTimeDistributionCtx = document.getElementById('runTimeDistributionChart').getContext('2d');
+    const runTimeDistributionData = <%= @run_time_distribution.to_json.html_safe %>;
+    new Chart(runTimeDistributionCtx, {
+        type: 'bar',
+        data: {
+            labels: runTimeDistributionData.map(item => `${item.run_time_bin}s`),
+            datasets: [{
+                label: 'Number of Tests',
+                data: runTimeDistributionData.map(item => item.test_count),
+                backgroundColor: 'rgb(239, 68, 68)',
+                borderColor: 'rgb(239, 68, 68)',
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: 'white' }
+                },
+                x: {
+                    ticks: { color: 'white' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            }
+        }
+    });
+</script>
+
+
+<div class="chart-container">
+  <h2 class="chart-title">📊 Test Count Trend</h2>
+  <p>This graphic shows the trend of the number of tests executed over a specific period, helping to track whether the volume of tests is increasing or decreasing. It can also indicate patterns in test execution frequency.</p>
+  <canvas id="testCountTrendChart"></canvas>
+</div>
+
+<script>
+          const testCountTrendCtx = document.getElementById('testCountTrendChart').getContext('2d');
+      const testCountTrendData = <%= @test_count_trend.to_json.html_safe %>;
+      new Chart(testCountTrendCtx, {
+        type: 'bar',
+        data: {
+          labels: testCountTrendData.map(item => item.test_date), // Etiquetas de los días
+          datasets: [{
+            label: 'Number of Tests',
+            data: testCountTrendData.map(item => item.test_count), // Número de pruebas por día
+            backgroundColor: 'rgb(75, 192, 192)', // Color de las barras
+            borderColor: 'rgb(75, 192, 192)', // Color de borde de las barras
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: 'white' } // Color de las marcas del eje Y
+            },
+            x: {
+              ticks: { color: 'white' } // Color de las marcas del eje X
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: 'white' } // Color de las etiquetas de la leyenda
+            }
+          }
+        }
+      });
+</script>
+
+<div class="chart-container">
+  <h2 class="chart-title">⏱️ Longest Tests by Day</h2>
+  <p>This chart highlights the longest running tests for each day, helping to identify tests that may be slowing down the testing process. It allows you to track specific tests that consistently take longer than others.</p>
+  <canvas id="longestTestsByDayChart"></canvas>
+</div>
+
+<script>
+  const longestTestsByDayCtx = document.getElementById('longestTestsByDayChart').getContext('2d');
+  const longestTestsByDayData = <%= @longest_tests_by_day.to_json.html_safe %>;
+
+  new Chart(longestTestsByDayCtx, {
+    type: 'bar',
+    data: {
+      labels: longestTestsByDayData.map(item => item.test_date), // Etiquetas de los días
+      datasets: [{
+        label: 'Longest Test Run Time (s)',
+        data: longestTestsByDayData.map(item => item.run_time), // Duración de la prueba más larga cada día
+        backgroundColor: 'rgb(255, 99, 132)', // Color de las barras
+        borderColor: 'rgb(255, 99, 132)', // Color de borde de las barras
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: 'white' } // Color de las marcas del eje Y
+        },
+        x: {
+          ticks: { color: 'white' } // Color de las marcas del eje X
+        }
+      },
+      plugins: {
+        legend: {
+          labels: { color: 'white' } // Color de las etiquetas de la leyenda
+        }
+      }
+    }
+  });
+</script>
+
+<div class="chart-container">
+    <h2 class="chart-title">⏳ Total Execution Time by Day</h2>
+    <p>This graphic illustrates the total execution time of tests for each day, providing insight into the overall testing workload. It can highlight trends in testing time, such as spikes or periods of more intensive testing.</p>
+    <canvas id="totalExecutionTimeChart"></canvas>
+</div>
+
+<script>
+    const totalExecutionTimeCtx = document.getElementById('totalExecutionTimeChart').getContext('2d');
+    const totalExecutionTimeData = <%= @total_execution_time_by_day.to_json.html_safe %>;
+
+    new Chart(totalExecutionTimeCtx, {
+        type: 'line',
+        data: {
+            labels: totalExecutionTimeData.map(item => item.test_date), // Días en el eje X
+            datasets: [{
+                label: 'Total Execution Time (s)',
+                data: totalExecutionTimeData.map(item => item.total_run_time), // Total de tiempo de ejecución por día
+                borderColor: 'rgb(29, 78, 216)',
+                backgroundColor: 'rgba(29, 78, 216, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: 'white' }
+                },
+                x: {
+                    ticks: { color: 'white' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            }
+        }
+    });
+</script>
+
+<div class="chart-container">
+    <h2 class="chart-title">⚠️ Tests Exceeding Time Threshold</h2>
+    <p>This chart tracks the number of tests that exceed a predefined time threshold. It helps identify tests that might need optimization or further investigation due to their high execution time.</p>
+    <canvas id="testsExceedingTimeThresholdChart"></canvas>
+</div>
+
+<script>
+    const testsExceedingTimeThresholdCtx = document.getElementById('testsExceedingTimeThresholdChart').getContext('2d');
+    const testsExceedingTimeThresholdData = <%= @tests_exceeding_time_threshold.to_json.html_safe %>;
+
+    new Chart(testsExceedingTimeThresholdCtx, {
+        type: 'bar',
+        data: {
+            labels: testsExceedingTimeThresholdData.map(item => item.test_date), // Días en el eje X
+            datasets: [{
+                label: 'Tests Exceeding Threshold',
+                data: testsExceedingTimeThresholdData.map(item => item.test_count), // Cantidad de tests que exceden el umbral
+                backgroundColor: 'rgb(255, 99, 132)',
+                borderColor: 'rgb(255, 99, 132)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: 'white' }
+                },
+                x: {
+                    ticks: { color: 'white' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            }
+        }
+    });
+</script>
+
+<div class="chart-container">
+    <h2 class="chart-title">❌ Failed Tests Trend by File</h2>
+    <p>This graphic shows the trend of failed tests, categorized by file. It helps identify files with a high number of test failures, allowing for more targeted debugging and optimization efforts.</p>
+    <canvas id="failedTestsTrendByFileChart"></canvas>
+</div>
+
+<script>
+    const failedTestsTrendByFileCtx = document.getElementById('failedTestsTrendByFileChart').getContext('2d');
+    const failedTestsTrendByFileData = <%= @failed_tests_trend_by_file.to_json.html_safe %>;
+
+    // Organizando los datos por archivo
+    const labels = [...new Set(failedTestsTrendByFileData.map(item => item.test_date))]; // Fechas únicas
+    const filePaths = [...new Set(failedTestsTrendByFileData.map(item => item.file_path))]; // Archivos únicos
+    const datasets = filePaths.map(filePath => {
+        return {
+            label: filePath,
+            data: labels.map(label => {
+                const dataForLabel = failedTestsTrendByFileData.filter(item => item.test_date === label && item.file_path === filePath);
+                return dataForLabel.length > 0 ? dataForLabel[0].failed_count : 0;
+            }),
+            backgroundColor: getRandomColor(), // Color aleatorio para cada archivo
+            borderColor: 'rgb(0, 0, 0)',
+            borderWidth: 1
+        };
+    });
+
+    new Chart(failedTestsTrendByFileCtx, {
+        type: 'bar',
+        data: {
+            labels: labels, // Fechas en el eje X
+            datasets: datasets // Datos para cada archivo
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: 'white' }
+                },
+                x: {
+                    ticks: { color: 'white' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            }
+        }
+    });
+
+    // Función para generar colores aleatorios
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+</script>
+
+<div class="chart-container">
+    <h2 class="chart-title">⏱️ Average Execution Time by File</h2>
+    <p>This chart displays the average execution time for tests in each file, helping to identify which files have longer test durations. It provides insight into areas that may require optimization for faster test execution.</p>
+    <canvas id="avgExecutionTimeByFileChart"></canvas>
+</div>
+
+<script>
+    // Obtener el contexto del gráfico
+    const avgExecutionTimeByFileCtx = document.getElementById('avgExecutionTimeByFileChart').getContext('2d');
+
+    // Asegurarse de que los datos no estén vacíos
+    const avgExecutionTimeByFileData = <%= @avg_execution_time_by_file.to_json.html_safe %>;
+
+    // Verificar los datos en consola
+    console.log(avgExecutionTimeByFileData);
+
+    // Si hay datos, procesarlos
+    if (avgExecutionTimeByFileData.length > 0) {
+        // Usa nombres únicos para las variables
+        const filePaths = avgExecutionTimeByFileData.map(item => item.file_path); // Rutas de los archivos
+        const avgRunTimes = avgExecutionTimeByFileData.map(item => item.average_run_time); // Tiempos promedio de ejecución
+
+        new Chart(avgExecutionTimeByFileCtx, {
+            type: 'bar',
+            data: {
+                labels: filePaths, // Archivos en el eje X
+                datasets: [{
+                    label: 'Average Execution Time (seconds)',
+                    data: avgRunTimes, // Datos de tiempo promedio de ejecución
+                    backgroundColor: 'rgb(67, 160, 71)', // Color de las barras
+                    borderColor: 'rgb(67, 160, 71)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: 'white' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        angle: -45, // Para mejorar la visualización de los nombres de archivo largos
+                        minRotation: 45 // Asegura que las etiquetas no se superpongan
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+<div class="chart-container">
+    <h2 class="chart-title">📊 Test Stability Trend</h2>
+    <p>This graphic shows the trend of test stability over time, indicating how frequently tests pass or fail. It can help assess the consistency of tests and identify areas where stability may be an issue.</p>
+    <canvas id="stabilityTrendChart"></canvas>
+</div>
+
+<script>
+    const stabilityTrendCtx = document.getElementById('stabilityTrendChart').getContext('2d');
+    const stabilityTrendData = <%= @stability_trend.to_json.html_safe %>;
+
+    if (stabilityTrendData.length === 0) {
+        console.error('No data to display on the chart.');
+    }
+
+    // Usa nombres únicos para las variables
+    const stabilityLabels = stabilityTrendData.map(item => item.test_date); // Fechas de las pruebas
+    const passedData = stabilityTrendData.map(item => item.passed_count || 0); // Conteo de pruebas pasadas
+    const failedData = stabilityTrendData.map(item => item.failed_count || 0); // Conteo de pruebas fallidas
+    const skippedData = stabilityTrendData.map(item => item.skipped_count || 0); // Conteo de pruebas saltadas
+    const pendingData = stabilityTrendData.map(item => item.pending_count || 0); // Conteo de pruebas pendientes
+    const errorData = stabilityTrendData.map(item => item.error_count || 0); // Conteo de pruebas con error
+
+    new Chart(stabilityTrendCtx, {
+        type: 'line',
+        data: {
+            labels: stabilityLabels, // Fechas en el eje X
+            datasets: [
+                {
+                    label: 'Passed',
+                    data: passedData, // Datos de pruebas pasadas
+                    borderColor: 'rgb(67, 160, 71)', // Color de línea para pasadas
+                    backgroundColor: 'rgba(67, 160, 71, 0.2)', // Color de relleno
+                    fill: true
+                },
+                {
+                    label: 'Failed',
+                    data: failedData, // Datos de pruebas fallidas
+                    borderColor: 'rgb(239, 68, 68)', // Color de línea para fallidas
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)', // Color de relleno
+                    fill: true
+                },
+                {
+                    label: 'Skipped',
+                    data: skippedData, // Datos de pruebas saltadas
+                    borderColor: 'rgb(255, 165, 0)', // Color de línea para saltadas
+                    backgroundColor: 'rgba(255, 165, 0, 0.2)', // Color de relleno
+                    fill: true
+                },
+                {
+                    label: 'Pending',
+                    data: pendingData, // Datos de pruebas pendientes
+                    borderColor: 'rgb(255, 205, 86)', // Color de línea para pendientes
+                    backgroundColor: 'rgba(255, 205, 86, 0.2)', // Color de relleno
+                    fill: true
+                },
+                {
+                    label: 'Error',
+                    data: errorData, // Datos de pruebas con error
+                    borderColor: 'rgb(255, 0, 0)', // Color de línea para error
+                    backgroundColor: 'rgba(255, 0, 0, 0.2)', // Color de relleno
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: 'white' }
+                },
+                x: {
+                    ticks: { color: 'white' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            }
+        }
+    });
+</script>
+
+
+</div>
+</body>
+</html>

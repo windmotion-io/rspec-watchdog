@@ -228,29 +228,36 @@ class SlowSpecFormatter
   require 'dotenv/load'
 
   def send_to_api(sorted_examples)
-
     uri = URI.parse("http://localhost:3000/watchdogs/analytics")
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == "https")
 
-    sorted_examples.each do |example|
-      puts "🌐 Sending data to Analytics API: #{uri}"
-      request = Net::HTTP::Post.new(uri.path, { 'Content-Type' => 'application/json', 'Authorization' => ENV['WATCHDOGS_API_TOKEN'] })
-      request.body = {
-        metric: {
-          description: example[:description],          # Descripción de la prueba
-          file_path: example[:file_path],              # Ruta del archivo
-          location: example[:location],                # Ubicación (línea y método)
-          run_time: example[:run_time],                # Tiempo de ejecución
-          status: example[:status],                    # Estado de la prueba (passed, failed, etc.)
-          error_message: example[:error_message],      # Mensaje de error si la prueba falla
+    batch_size = 30
+    sorted_examples.each_slice(batch_size) do |batch|
+      puts "🌐 Sending batch of #{batch.size} to Analytics API"
+
+      batch_payload = batch.map do |example|
+        {
+          description: example[:description],
+          file_path: example[:file_path],
+          location: example[:location],
+          run_time: example[:run_time],
+          status: example[:status],
+          error_message: example[:error_message]
         }
-      }.to_json
+      end
+
+      request = Net::HTTP::Post.new(uri.path, {
+        "Content-Type" => "application/json",
+        "Authorization" => ENV["WATCHDOGS_API_TOKEN"]
+      })
+      request.body = { metrics: batch_payload }.to_json
 
       begin
         response = http.request(request)
+        puts "✅ Batch sent successfully: #{response.code} #{response.message}"
       rescue StandardError => e
-        puts "Error sending data to API: #{e.message}"
+        puts "❌ Error sending batch: #{e.message}"
       end
     end
   end

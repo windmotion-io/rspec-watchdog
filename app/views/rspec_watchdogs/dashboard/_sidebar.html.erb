@@ -12,16 +12,14 @@
         <li class="<%= 'active' if controller_name == 'dashboard' && action_name == 'flaky' %>">
           <%= link_to "🔥 Flaky Tests", metrics_path %>
         </li>
+        <li class="<%= 'active' if controller_name == 'dashboard' && action_name == 'historic' %>">
+          <%= link_to "📜 Historic", historic_path %>
+        </li>
     </ul>
 </div>
 <style>
 /* Estilos generales */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f4f7fa;
-    margin: 0;
-    display: flex;
-}
+
 
 /* Sidebar */
 .sidebar {
@@ -30,6 +28,7 @@ body {
     background: #1e293b;
     color: white;
     padding: 20px;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     box-shadow: 3px 0 10px rgba(0, 0, 0, 0.1);

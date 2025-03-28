@@ -5,7 +5,18 @@ module RspecWatchdogs
 
     # CREATE
     def analytics
-      Metric.create!(metric_params)
+      batch = params[:metrics]
+
+      metrics_to_insert = batch.map do |metric|
+        Metric.create!(
+          description: metric[:description],
+          file_path: metric[:file_path],
+          location: metric[:location],
+          run_time: metric[:run_time],
+          status: metric[:status],
+          error_message: metric[:error_message]
+        )
+      end
     end
 
     def flakiness

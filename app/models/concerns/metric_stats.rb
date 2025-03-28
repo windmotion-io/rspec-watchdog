@@ -117,4 +117,101 @@ module MetricStats
       }
     end
   end
+
+  # HISTORIC DATA
+  def run_time_distribution(bin_size = 1.0)
+    RspecWatchdogs::Metric.select("FLOOR(run_time / #{bin_size}) as run_time_bin,
+                                    COUNT(*) as test_count")
+                            .group("run_time_bin")
+                            .order("run_time_bin")
+  end
+
+  def performance_trend(days = 30)
+    RspecWatchdogs::Metric
+      .select("DATE(created_at) as test_date, AVG(run_time) as average_run_time")
+      .where(created_at: days.days.ago..Time.current.end_of_day) # ← INCLUYE HOY COMPLETO
+      .group("DATE(created_at)")
+      .order("DATE(created_at)")
+      .map { |m| { test_date: m.test_date.to_s, average_run_time: m.average_run_time.to_f } }
+  end
+
+  def test_count_trend(days = 30)
+    RspecWatchdogs::Metric
+      .select("DATE(created_at) as test_date, COUNT(*) as test_count")
+      .where(created_at: days.days.ago..Time.current.end_of_day)
+      .group("DATE(created_at)")
+      .order("DATE(created_at)")
+      .map { |m| { test_date: m.test_date.to_s, test_count: m.test_count } }
+  end
+
+  def longest_tests_by_day(days = 30)
+    RspecWatchdogs::Metric
+      .select("DATE(created_at) as test_date, description, run_time")
+      .where(created_at: days.days.ago..Time.current.end_of_day)
+      .where("run_time = (SELECT MAX(run_time) FROM rspec_watchdogs_metrics AS m2 WHERE DATE(m2.created_at) = DATE(rspec_watchdogs_metrics.created_at))")
+      .order("test_date DESC") # Ordenamos por fecha
+      .map { |m| { test_date: m.test_date.to_s, description: m.description, run_time: m.run_time.to_f } }
+  end
+
+  def total_execution_time_by_day(days = 30)
+    RspecWatchdogs::Metric
+      .select("DATE(created_at) as test_date, SUM(run_time) as total_run_time")
+      .where(created_at: days.days.ago..Time.current.end_of_day)
+      .group("DATE(created_at)")
+      .order("DATE(created_at)")
+      .map { |m| { test_date: m.test_date.to_s, total_run_time: m.total_run_time } }
+  end
+
+  def tests_exceeding_time_threshold(threshold = 1.0, days = 30)
+    RspecWatchdogs::Metric
+      .select("DATE(created_at) as test_date, COUNT(*) as test_count")
+      .where('run_time > ?', threshold)
+      .where(created_at: days.days.ago..Time.current.end_of_day)
+      .group("DATE(created_at)")
+      .order("DATE(created_at)")
+      .map { |m| { test_date: m.test_date.to_s, test_count: m.test_count } }
+  end
+
+  def failed_tests_trend_by_file(days = 30)
+    RspecWatchdogs::Metric
+      .select("DATE(created_at) as test_date, file_path, COUNT(*) as failed_count")
+      .where(status: 'failed', created_at: days.days.ago..Time.current.end_of_day)
+      .group("DATE(created_at), file_path")
+      .order("DATE(created_at), failed_count DESC")
+      .map { |m| { test_date: m.test_date.to_s, file_path: m.file_path, failed_count: m.failed_count } }
+  end
+def avg_execution_time_by_file(days = 30)
+  RspecWatchdogs::Metric
+    .select("file_path, AVG(run_time) as average_run_time")
+    .where(created_at: days.days.ago..Time.current.end_of_day)
+    .where("run_time IS NOT NULL") # Filtrar nulos si es necesario
+    .group("file_path")
+    .order("average_run_time DESC")
+    .map { |m| { file_path: m.file_path, average_run_time: m.average_run_time.to_f.round(2) } } # Asegurarse de que sea flotante
+end
+
+
+def stability_trend(days = 30)
+  RspecWatchdogs::Metric
+    .select("DATE(created_at) as test_date,
+             SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) as passed_count,
+             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,
+             SUM(CASE WHEN status = 'skipped' THEN 1 ELSE 0 END) as skipped_count,
+             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+             SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count")
+    .where(created_at: days.days.ago..Time.current.end_of_day)
+    .group("DATE(created_at)") # Asegúrate de que solo agrupas por la fecha, no por otros campos
+    .order("DATE(created_at)")
+    .map { |m|
+      {
+        test_date: m.test_date.to_s,
+        passed_count: m.passed_count,
+        failed_count: m.failed_count,
+        skipped_count: m.skipped_count,
+        pending_count: m.pending_count,
+        error_count: m.error_count
+      }
+    }
+end
+
 end
