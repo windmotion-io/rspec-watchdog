@@ -1,44 +1,35 @@
 require "rspec/core/formatters/base_text_formatter"
+require 'net/http'
+require 'json'
 
 class SlowSpecFormatter
   RSpec::Core::Formatters.register self, :dump_summary
 
   def initialize(output)
     @output = output
+    @show_logs = RspecWatchdogs.config.show_logs
+    @watchdogs_api_url = RspecWatchdogs.config.watchdogs_api_url
+    @watchdogs_api_token = RspecWatchdogs.config.watchdogs_api_token
   end
 
-  # # Called each time an example finishes
-  # def example_finished(notification)
-  #   puts "example_finished: #{notification.example.full_description}"
-  #   example = notification.example
-  #   if example.execution_result.run_time > threshold_time
-  #     @@slow_examples << {
-  #       description: example.full_description,
-  #       file_path: example.metadata[:file_path],
-  #       run_time: example.execution_result.run_time
-  #     }
-  #   end
-  # end
-
   def dump_summary(summary)
+    return unless @show_logs
+
     puts "\nAll examples sorted by run time (most durable to fastest):"
 
-    # Crear una lista con todos los ejemplos y sus tiempos de ejecución
     all_examples = summary.examples.map do |example|
       {
-        description: example.full_description,               # Descripción de la prueba
-        file_path: example.metadata[:file_path],             # Ruta del archivo de la prueba
-        location: example.metadata[:location],               # Ubicación de la prueba
-        run_time: example.execution_result.run_time,         # Tiempo de ejecución de la prueba
-        status: example.execution_result.status.to_s,        # Estado de la prueba (passed, failed, etc.)
-        error_message: example.execution_result.exception ? example.execution_result.exception.message : nil, # Error si falla
+        description: example.full_description,
+        file_path: example.metadata[:file_path],
+        location: example.metadata[:location],
+        run_time: example.execution_result.run_time,
+        status: example.execution_result.status.to_s,
+        error_message: example.execution_result.exception ? example.execution_result.exception.message : nil,
       }
     end
 
-    # Ordenar los ejemplos por tiempo de ejecución (de más duraderos a más rápidos)
     sorted_examples = all_examples.sort_by { |ex| -ex[:run_time] }
 
-    # Imprimir los ejemplos ordenados
     sorted_examples.each do |ex|
       puts "#{ex[:description]} (#{ex[:file_path]}) - #{ex[:run_time]} seconds - #{ex[:location]}"
     end
@@ -56,7 +47,7 @@ class SlowSpecFormatter
     temporal_complexity_analysis(sorted_examples)
     test_dependency_analysis(sorted_examples)
 
-    # Optionally, send data to an external API:
+    return unless @watchdogs_api_url && @watchdogs_api_token
     send_to_api(sorted_examples)
   end
 
@@ -100,7 +91,6 @@ class SlowSpecFormatter
       puts "\e[31m#{example.full_description} (#{example.metadata[:file_path]}) - #{example.execution_result.run_time} seconds\e[0m"
       puts "  \e[33mLocation:\e[0m #{example.metadata[:location]}"
       puts "  \e[31mFailure message:\e[0m #{example.execution_result.exception.message}"
-      # puts "  \e[35mBacktrace:\e[0m #{example.execution_result.exception.backtrace.join("\n")}"
     end
   end
 
@@ -126,11 +116,9 @@ class SlowSpecFormatter
     end
   end
 
-
   def time_distribution_analysis(sorted_examples)
     total_tests = sorted_examples.size
 
-    # Execution time categories
     categories = {
       "⚡ Ultra Fast (< 0.01s)" => 0,
       "🚀 Fast (0.01s - 0.1s)" => 0,
@@ -176,14 +164,8 @@ class SlowSpecFormatter
 
   def execution_time_variance(sorted_examples)
     run_times = sorted_examples.map { |ex| ex[:run_time] }
-
-    # Calcular media
     mean = run_times.sum / run_times.size
-
-    # Calcular varianza
     variance = run_times.map { |time| (time - mean) ** 2 }.sum / run_times.size
-
-    # Calcular desviación estándar
     std_dev = Math.sqrt(variance)
 
     puts "\n📈 \e[35mExecution Time Variance:\e[0m"
@@ -193,7 +175,6 @@ class SlowSpecFormatter
   end
 
   def temporal_complexity_analysis(sorted_examples)
-    # Asume que el tiempo de ejecución podría estar relacionado con la complejidad del test
     sorted_by_complexity = sorted_examples.sort_by { |ex| ex[:run_time] }
 
     puts "\n🧩 \e[32mTemporal Complexity Analysis:\e[0m"
@@ -206,7 +187,6 @@ class SlowSpecFormatter
   end
 
   def test_dependency_analysis(sorted_examples)
-    # Analiza posibles agrupamientos o dependencias por ubicación de archivo
     file_dependencies = sorted_examples.group_by { |ex| ex[:file_path] }
 
     puts "\n🔗 \e[33mTest Dependency Analysis:\e[0m"
@@ -219,16 +199,8 @@ class SlowSpecFormatter
     end
   end
 
-  def threshold_time
-    0.1  # Example threshold: specs running longer than 0.5 seconds are considered slow
-  end
-
-  require 'net/http'
-  require 'json'
-  require 'dotenv/load'
-
   def send_to_api(sorted_examples)
-    uri = URI.parse("http://localhost:3000/watchdogs/analytics")
+    uri = URI.parse(@watchdogs_api_url)
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == "https")
 
@@ -249,7 +221,7 @@ class SlowSpecFormatter
 
       request = Net::HTTP::Post.new(uri.path, {
         "Content-Type" => "application/json",
-        "Authorization" => ENV["WATCHDOGS_API_TOKEN"]
+        "Authorization" => @watchdogs_api_token
       })
       request.body = { metrics: batch_payload }.to_json
 

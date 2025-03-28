@@ -29,7 +29,7 @@ module RspecWatchdogs
       @percentiles = percentiles
       @failed_tests = failed_tests
       @tests_grouped_by_file = tests_grouped_by_file
-      @tests_that_took_longer_than = tests_that_took_longer_than(0.5)  # Puedes ajustar el umbral
+      @tests_that_took_longer_than = tests_that_took_longer_than(0.5)
       @time_distribution_analysis = time_distribution_analysis
 
       @test_stability_analysis = test_stability_analysis
