@@ -1,4 +1,4 @@
-module RspecWatchdog
+module Rspec::Watchdog
   class DashboardController < ApplicationController
     include MetricStats
 

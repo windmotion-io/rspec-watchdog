@@ -1,8 +1,8 @@
-require_relative "lib/rspec_watchdog/version"
+require_relative "lib/rspec/watchdog/version"
 
 Gem::Specification.new do |spec|
-  spec.name        = "rspec_watchdog"
-  spec.version     = RspecWatchdog::VERSION
+  spec.name        = "rspec-watchdog"
+  spec.version     = Rspec::Watchdog::VERSION
   spec.authors       = ["Federico Aldunate", "Agustin Fornio"]
   spec.email         = ["tech@windmotion.io"]
   spec.summary       = "RSpec performance tracking and metrics"

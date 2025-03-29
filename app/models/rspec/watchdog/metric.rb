@@ -1,4 +1,4 @@
-module RspecWatchdog
+module Rspec::Watchdog
   class Metric < ApplicationRecord
     # enum status: {
     #   passed: "passed",

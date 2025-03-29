@@ -2,7 +2,7 @@ require "rspec/core/formatters/base_text_formatter"
 require 'net/http'
 require 'json'
 
-class SlowSpecFormatter
+class Rspec::Watchdog::SlowSpecFormatter
   RSpec::Core::Formatters.register self, :dump_summary
 
   def initialize(output)

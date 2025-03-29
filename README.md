@@ -25,7 +25,7 @@ Testing is a crucial part of the development process, but it can be challenging 
 Add rspec_watchdog to your Gemfile:
 
 ```
-gem 'rspec_watchdog'
+gem 'rspec-watchdog'
 ```
 
 Then, run:

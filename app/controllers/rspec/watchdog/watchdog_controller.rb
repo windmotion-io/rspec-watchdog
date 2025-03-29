@@ -1,4 +1,4 @@
-module RspecWatchdog
+module Rspec::Watchdog
   class WatchdogController < ApplicationController
     skip_forgery_protection
     before_action :authenticate_token

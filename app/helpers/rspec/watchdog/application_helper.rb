@@ -1,4 +1,4 @@
-module RspecWatchdog
+module Rspec::Watchdog
   module ApplicationHelper
   end
 end

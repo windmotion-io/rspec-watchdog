@@ -1,4 +1,4 @@
-module RspecWatchdog
+module Rspec::Watchdog
   class Flaky < ApplicationRecord
     # enum status: {
     #   passed: "passed",
