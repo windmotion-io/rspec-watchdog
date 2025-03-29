@@ -1,4 +1,4 @@
-RspecWatchdogs::Engine.routes.draw do
+RspecWatchdog::Engine.routes.draw do
   get "dashboard/index"
   get "metrics", to: "dashboard#metrics"
   get "historic", to: "dashboard#historic"

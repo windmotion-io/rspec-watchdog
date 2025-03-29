@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rspec Watchdog</title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <%= yield :head %>
+
+  <%= stylesheet_link_tag    "rspec_watchdog/application", media: "all" %>
+</head>
+<body>
+
+<style>
+  body {
+      font-family: monospace;
+      margin: 0;
+      background-image: linear-gradient(to bottom right, rgb(17, 24, 39), rgb(12, 74, 110));
+      color: rgb(229, 231, 235);
+      display: flex;
+  }
+</style>
+
+<%= render "sidebar" %>
+<%= yield %>
+
+</body>
+</html>

@@ -2,22 +2,22 @@ module MetricStats
   extend ActiveSupport::Concern
 
   def average_time
-    RspecWatchdogs::Metric.all.average(:run_time)
+    RspecWatchdog::Metric.all.average(:run_time)
   end
 
   def fastest_test
-    RspecWatchdogs::Metric.order(:run_time).first
+    RspecWatchdog::Metric.order(:run_time).first
   end
 
   def slowest_test
-    RspecWatchdogs::Metric.order(run_time: :desc).first
+    RspecWatchdog::Metric.order(run_time: :desc).first
   end
 
   def percentiles
-    total = RspecWatchdogs::Metric.count
+    total = RspecWatchdog::Metric.count
     [0.25, 0.5, 0.75].map do |p|
       index = (total * p).round - 1
-      example = RspecWatchdogs::Metric.order(:run_time).limit(1).offset(index).first
+      example = RspecWatchdog::Metric.order(:run_time).limit(1).offset(index).first
       {
         percentile: (p * 100).to_i,
         description: example.description,
@@ -28,19 +28,19 @@ module MetricStats
   end
 
   def failed_tests
-    RspecWatchdogs::Metric.where(status: 'failed')
+    RspecWatchdog::Metric.where(status: 'failed')
   end
 
   def tests_grouped_by_file
-    RspecWatchdogs::Metric.group(:file_path).order(:file_path)
+    RspecWatchdog::Metric.group(:file_path).order(:file_path)
   end
 
   def tests_that_took_longer_than(threshold)
-    RspecWatchdogs::Metric.where('run_time > ?', threshold)
+    RspecWatchdog::Metric.where('run_time > ?', threshold)
   end
 
   def time_distribution_analysis
-    total_tests = RspecWatchdogs::Metric.count
+    total_tests = RspecWatchdog::Metric.count
     categories = {
       "⚡ Ultra Fast (< 0.01s)" => 0,
       "🚀 Fast (0.01s - 0.1s)" => 0,
@@ -49,7 +49,7 @@ module MetricStats
       "🐢 Very Slow (> 1s)" => 0
     }
 
-    RspecWatchdogs::Metric.find_each do |ex|
+    RspecWatchdog::Metric.find_each do |ex|
       case ex.run_time
       when 0...0.01
         categories["⚡ Ultra Fast (< 0.01s)"] += 1
@@ -68,10 +68,10 @@ module MetricStats
   end
 
   def test_stability_analysis
-    total_tests = RspecWatchdogs::Metric.count
-    passed = RspecWatchdogs::Metric.where(status: 'passed').count
-    failed = RspecWatchdogs::Metric.where(status: 'failed').count
-    pending = RspecWatchdogs::Metric.where(status: 'pending').count
+    total_tests = RspecWatchdog::Metric.count
+    passed = RspecWatchdog::Metric.where(status: 'passed').count
+    failed = RspecWatchdog::Metric.where(status: 'failed').count
+    pending = RspecWatchdog::Metric.where(status: 'pending').count
 
     {
       total_tests: total_tests,
@@ -82,7 +82,7 @@ module MetricStats
   end
 
   def execution_time_variance
-    run_times = RspecWatchdogs::Metric.pluck(:run_time)
+    run_times = RspecWatchdog::Metric.pluck(:run_time)
     mean = run_times.sum / run_times.size
     variance = run_times.map { |time| (time - mean) ** 2 }.sum / run_times.size
     std_dev = Math.sqrt(variance)
@@ -95,7 +95,7 @@ module MetricStats
   end
 
   def temporal_complexity_analysis
-    sorted_by_complexity = RspecWatchdogs::Metric.order(:run_time)
+    sorted_by_complexity = RspecWatchdog::Metric.order(:run_time)
 
     sorted_by_complexity.first(3).map do |ex|
       {
@@ -107,27 +107,27 @@ module MetricStats
   end
 
   def test_dependency_analysis
-    file_dependencies = RspecWatchdogs::Metric.group(:file_path).having("count(*) > 1").count
+    file_dependencies = RspecWatchdog::Metric.group(:file_path).having("count(*) > 1").count
 
     file_dependencies.map do |file, count|
       {
         file: file,
         number_of_tests: count,
-        average_execution_time: RspecWatchdogs::Metric.where(file_path: file).average(:run_time)
+        average_execution_time: RspecWatchdog::Metric.where(file_path: file).average(:run_time)
       }
     end
   end
 
   # HISTORIC DATA
   def run_time_distribution(bin_size = 1.0)
-    RspecWatchdogs::Metric.select("FLOOR(run_time / #{bin_size}) as run_time_bin,
+    RspecWatchdog::Metric.select("FLOOR(run_time / #{bin_size}) as run_time_bin,
                                     COUNT(*) as test_count")
                             .group("run_time_bin")
                             .order("run_time_bin")
   end
 
   def performance_trend(days = 30)
-    RspecWatchdogs::Metric
+    RspecWatchdog::Metric
       .select("DATE(created_at) as test_date, AVG(run_time) as average_run_time")
       .where(created_at: days.days.ago..Time.current.end_of_day) # ← INCLUYE HOY COMPLETO
       .group("DATE(created_at)")
@@ -136,7 +136,7 @@ module MetricStats
   end
 
   def test_count_trend(days = 30)
-    RspecWatchdogs::Metric
+    RspecWatchdog::Metric
       .select("DATE(created_at) as test_date, COUNT(*) as test_count")
       .where(created_at: days.days.ago..Time.current.end_of_day)
       .group("DATE(created_at)")
@@ -145,16 +145,16 @@ module MetricStats
   end
 
   def longest_tests_by_day(days = 30)
-    RspecWatchdogs::Metric
+    RspecWatchdog::Metric
       .select("DATE(created_at) as test_date, description, run_time")
       .where(created_at: days.days.ago..Time.current.end_of_day)
-      .where("run_time = (SELECT MAX(run_time) FROM rspec_watchdogs_metrics AS m2 WHERE DATE(m2.created_at) = DATE(rspec_watchdogs_metrics.created_at))")
+      .where("run_time = (SELECT MAX(run_time) FROM rspec_watchdog_metrics AS m2 WHERE DATE(m2.created_at) = DATE(rspec_watchdog_metrics.created_at))")
       .order("test_date DESC") # Ordenamos por fecha
       .map { |m| { test_date: m.test_date.to_s, description: m.description, run_time: m.run_time.to_f } }
   end
 
   def total_execution_time_by_day(days = 30)
-    RspecWatchdogs::Metric
+    RspecWatchdog::Metric
       .select("DATE(created_at) as test_date, SUM(run_time) as total_run_time")
       .where(created_at: days.days.ago..Time.current.end_of_day)
       .group("DATE(created_at)")
@@ -163,7 +163,7 @@ module MetricStats
   end
 
   def tests_exceeding_time_threshold(threshold = 1.0, days = 30)
-    RspecWatchdogs::Metric
+    RspecWatchdog::Metric
       .select("DATE(created_at) as test_date, COUNT(*) as test_count")
       .where('run_time > ?', threshold)
       .where(created_at: days.days.ago..Time.current.end_of_day)
@@ -173,7 +173,7 @@ module MetricStats
   end
 
   def failed_tests_trend_by_file(days = 30)
-    RspecWatchdogs::Metric
+    RspecWatchdog::Metric
       .select("DATE(created_at) as test_date, file_path, COUNT(*) as failed_count")
       .where(status: 'failed', created_at: days.days.ago..Time.current.end_of_day)
       .group("DATE(created_at), file_path")
@@ -181,7 +181,7 @@ module MetricStats
       .map { |m| { test_date: m.test_date.to_s, file_path: m.file_path, failed_count: m.failed_count } }
   end
 def avg_execution_time_by_file(days = 30)
-  RspecWatchdogs::Metric
+  RspecWatchdog::Metric
     .select("file_path, AVG(run_time) as average_run_time")
     .where(created_at: days.days.ago..Time.current.end_of_day)
     .where("run_time IS NOT NULL") # Filtrar nulos si es necesario
@@ -192,7 +192,7 @@ end
 
 
 def stability_trend(days = 30)
-  RspecWatchdogs::Metric
+  RspecWatchdog::Metric
     .select("DATE(created_at) as test_date,
              SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) as passed_count,
              SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,

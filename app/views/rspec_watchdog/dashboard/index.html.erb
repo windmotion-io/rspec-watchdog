@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RSpec Performance Dashboard</title>
+    <style>
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .title {
+            font-size: 1.875rem;
+            color: rgb(74, 222, 128);
+        }
+        .version {
+            font-size: 0.875rem;
+            color: rgb(156, 163, 175);
+            margin-left: 0.5rem;
+        }
+        .last-scan {
+            background-color: rgba(31, 41, 55, 0.7);
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            border-left: 2px solid rgb(239, 68, 68);
+            font-size: 0.75rem;
+        }
+        .last-scan-time {
+            color: rgb(250, 204, 21);
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .summary-card {
+            background-color: rgba(31, 41, 55, 0.8);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgb(55, 65, 81);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s;
+            text-align: center;
+        }
+        .summary-card:hover {
+            border-color: rgb(239, 68, 68);
+        }
+        .summary-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: rgb(248, 113, 113);
+        }
+        .summary-card .value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .summary-card .trend {
+            font-size: 0.875rem;
+            color: rgb(156, 163, 175);
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .section {
+            background-color: rgba(31, 41, 55, 0.8);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgb(55, 65, 81);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .section h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: rgb(250, 204, 21);
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        table thead tr {
+            border-bottom: 1px solid rgb(55, 65, 81);
+            color: rgb(156, 163, 175);
+        }
+        table tbody tr {
+            border-bottom: 1px solid rgb(55, 65, 81);
+            transition: background-color 0.2s;
+        }
+        table tbody tr:hover {
+            background-color: rgba(127, 29, 29, 0.2);
+        }
+        table th, table td {
+            padding: 0.5rem 0;
+            text-align: left;
+        }
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: rgb(107, 114, 128);
+            text-align: center;
+        }
+        .footer a {
+            color: rgb(96, 165, 250);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .footer a:hover {
+            color: rgb(248, 113, 113);
+        }
+        .warning {
+            text-align: center;
+            color: #e74c3c;
+            margin: 30px 0;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <span class="title">Rspec Watchdog Dashboard</span>
+                <span class="version">v<%= RspecWatchdog::VERSION %>-alpha</span>
+            </div>
+            <div class="last-scan">
+                Last scan: <span class="last-scan-time"><%= Time.current.strftime('%Y-%m-%d %H:%M:%S UTC') %></span>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>🕒 Avg Execution Time</h3>
+                <div class="value"><%= RspecWatchdog::Metric.average(:run_time).to_f.round(3) %>s</div>
+                <div class="trend">Test Performance</div>
+            </div>
+            <div class="summary-card">
+                <h3>📁 Unique Files</h3>
+                <div class="value"><%= RspecWatchdog::Metric.distinct.count(:file_path) %></div>
+                <div class="trend">Analyzed Files</div>
+            </div>
+            <div class="summary-card">
+                <h3>🚨 Flaky Tests</h3>
+                <div class="value"><%= RspecWatchdog::Flaky.count %></div>
+                <div class="trend">Total Flaky</div>
+            </div>
+            <div class="summary-card">
+                <h3>📊 Total Metrics</h3>
+                <div class="value"><%= RspecWatchdog::Metric.count %></div>
+                <div class="trend">Collected</div>
+            </div>
+        </div>
+
+        <% if RspecWatchdog::Flaky.any? %>
+            <div class="warning">🔥 Flaky Tests Detected 🔥</div>
+        <% end %>
+
+        <div class="content-grid">
+            <div class="section">
+                <h3>🕒 Top 3 Slowest Tests</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Time (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% RspecWatchdog::Metric.order(run_time: :desc).limit(3).each do |metric| %>
+                            <tr>
+                                <td><%= metric.description %></td>
+                                <td><%= metric.run_time.round(3) %></td>
+                            </tr>
+                        <% end %>
+                    </tbody>
+                </table>
+            </div>
+            <div class="section">
+                <h3>🚨 Top 3 Flaky Tests</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>File</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% RspecWatchdog::Flaky.order(created_at: :desc).limit(3).each do |flaky| %>
+                            <tr>
+                                <td><%= flaky.description %></td>
+                                <td><%= flaky.file_path %></td>
+                            </tr>
+                        <% end %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Dashboard <span class="version">v<%= RspecWatchdog::VERSION %>-alpha</span> | Data refreshed every 6 hours |
+                <a href="#">Configure alerts</a> |
+                <a href="#">Export data</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
