@@ -1,0 +1,40 @@
+# frozen_string_literal: true
+
+require_relative "lib/rspec/watchdog/version"
+
+Gem::Specification.new do |spec|
+  spec.name          = "rspec-watchdog"
+  spec.version       = Rspec::Watchdog::VERSION
+  spec.authors       = ["Federico Aldunate", "Agustin Fornio"]
+  spec.email         = ["tech@windmotion.io"]
+  spec.summary       = "RSpec performance tracking and metrics"
+  spec.description   = "Track RSpec test performance, identify slow tests, and generate metrics"
+  spec.homepage      = "https://github.com/windmotion-io/rspec-watchdog"
+  spec.license       = "MIT"
+  spec.required_ruby_version = ">= 3.0.0"
+
+  spec.metadata["allowed_push_host"] = "https://github.com/windmotion-io/rspec-watchdog"
+
+  spec.metadata["homepage_uri"] = spec.homepage
+  spec.metadata["source_code_uri"] = "https://github.com/windmotion-io/rspec-watchdog"
+  spec.metadata["changelog_uri"] = "https://github.com/windmotion-io/rspec-watchdog"
+
+  # Specify which files should be added to the gem when it is released.
+  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
+  gemspec = File.basename(__FILE__)
+  spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
+    ls.readlines("\x0", chomp: true).reject do |f|
+      (f == gemspec) ||
+        f.start_with?(*%w[bin/ test/ spec/ features/ .git appveyor Gemfile])
+    end
+  end
+  spec.bindir = "exe"
+  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
+  spec.require_paths = ["lib"]
+
+  # Uncomment to register a new dependency of your gem
+  spec.add_development_dependency "rspec", "~> 3.12"
+
+  # For more information and examples about making a new gem, check out our
+  # guide at: https://bundler.io/guides/creating_gem.html
+end
