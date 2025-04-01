@@ -1,4 +1,4 @@
-require "rspec/core/formatters/base_text_formatter"
+require 'rspec/core/formatters/base_text_formatter'
 require 'net/http'
 require 'json'
 
@@ -8,6 +8,7 @@ class SlowSpecFormatter
   def initialize(output)
     @output = output
     @show_logs = Rspec::Watchdog.config.show_logs
+    @flaky_spec_detection = RSpec.configuration.flaky_spec_detection
     @watchdog_api_url = Rspec::Watchdog.config.watchdog_api_url
     @watchdog_api_token = Rspec::Watchdog.config.watchdog_api_token
   end
@@ -25,6 +26,7 @@ class SlowSpecFormatter
         run_time: example.execution_result.run_time,
         status: example.execution_result.status.to_s,
         error_message: example.execution_result.exception ? example.execution_result.exception.message : nil,
+        flaky: example.metadata[:flaky] || false
       }
     end
 
@@ -48,6 +50,7 @@ class SlowSpecFormatter
     test_dependency_analysis(sorted_examples)
 
     return unless @watchdog_api_url && @watchdog_api_token
+
     send_to_api(sorted_examples)
   end
 
@@ -55,17 +58,19 @@ class SlowSpecFormatter
 
   def calculate_average_time(summary)
     average_time = summary.duration / summary.example_count
-    puts "\n🕒 \e[34mAverage time per example:\e[0m #{sprintf('%.4f', average_time)} seconds"
+    puts "\n🕒 \e[34mAverage time per example:\e[0m #{format('%.4f', average_time)} seconds"
   end
 
   def fastest_test(sorted_examples)
     fastest = sorted_examples.last
-    puts "\n🚀 \e[32mFastest test:\e[0m #{fastest[:description]} (#{fastest[:file_path]}) - #{sprintf('%.4f', fastest[:run_time])} seconds"
+    puts "\n🚀 \e[32mFastest test:\e[0m #{fastest[:description]} (#{fastest[:file_path]}) - #{format('%.4f',
+                                                                                                     fastest[:run_time])} seconds"
   end
 
   def slowest_test(sorted_examples)
     slowest = sorted_examples.first
-    puts "\n🐢 \e[31mSlowest test:\e[0m #{slowest[:description]} (#{slowest[:file_path]}) - #{sprintf('%.4f', slowest[:run_time])} seconds"
+    puts "\n🐢 \e[31mSlowest test:\e[0m #{slowest[:description]} (#{slowest[:file_path]}) - #{format('%.4f',
+                                                                                                     slowest[:run_time])} seconds"
   end
 
   def percentiles(sorted_examples)
@@ -80,7 +85,8 @@ class SlowSpecFormatter
       }
     end
     percentiles.each do |p|
-      puts "\n📊 \e[35m#{p[:percentile]}th percentile:\e[0m #{p[:description]} (#{p[:file_path]}) - #{sprintf('%.4f', p[:run_time])} seconds"
+      puts "\n📊 \e[35m#{p[:percentile]}th percentile:\e[0m #{p[:description]} (#{p[:file_path]}) - #{format('%.4f',
+                                                                                                             p[:run_time])} seconds"
     end
   end
 
@@ -100,9 +106,9 @@ class SlowSpecFormatter
     grouped_by_file.each do |file_path, examples|
       puts "\n\e[36mFile:\e[0m #{file_path}"
       examples.each do |ex|
-        puts "  🧪 #{ex[:description]} - #{sprintf('%.4f', ex[:run_time])} seconds"
+        puts "  🧪 #{ex[:description]} - #{format('%.4f', ex[:run_time])} seconds"
         puts "  📍 Location: #{ex[:location]}"
-        puts "  "
+        puts '  '
       end
     end
   end
@@ -111,7 +117,7 @@ class SlowSpecFormatter
     long_tests = sorted_examples.select { |ex| ex[:run_time] > threshold }
     puts "\n⏳ \e[33mTests that took longer than #{threshold} seconds:\e[0m"
     long_tests.each do |ex|
-      puts "\e[33m#{ex[:description]} (#{ex[:file_path]}) - #{sprintf('%.4f', ex[:run_time])} seconds\e[0m"
+      puts "\e[33m#{ex[:description]} (#{ex[:file_path]}) - #{format('%.4f', ex[:run_time])} seconds\e[0m"
       puts "  📍 Location: #{ex[:location]}"
     end
   end
@@ -120,25 +126,25 @@ class SlowSpecFormatter
     total_tests = sorted_examples.size
 
     categories = {
-      "⚡ Ultra Fast (< 0.01s)" => 0,
-      "🚀 Fast (0.01s - 0.1s)" => 0,
-      "🏃 Normal (0.1s - 0.5s)" => 0,
-      "🚶 Slow (0.5s - 1s)" => 0,
-      "🐢 Very Slow (> 1s)" => 0
+      '⚡ Ultra Fast (< 0.01s)' => 0,
+      '🚀 Fast (0.01s - 0.1s)' => 0,
+      '🏃 Normal (0.1s - 0.5s)' => 0,
+      '🚶 Slow (0.5s - 1s)' => 0,
+      '🐢 Very Slow (> 1s)' => 0
     }
 
     sorted_examples.each do |ex|
       case ex[:run_time]
       when 0...0.01
-        categories["⚡ Ultra Fast (< 0.01s)"] += 1
+        categories['⚡ Ultra Fast (< 0.01s)'] += 1
       when 0.01...0.1
-        categories["🚀 Fast (0.01s - 0.1s)"] += 1
+        categories['🚀 Fast (0.01s - 0.1s)'] += 1
       when 0.1...0.5
-        categories["🏃 Normal (0.1s - 0.5s)"] += 1
+        categories['🏃 Normal (0.1s - 0.5s)'] += 1
       when 0.5...1.0
-        categories["🚶 Slow (0.5s - 1s)"] += 1
+        categories['🚶 Slow (0.5s - 1s)'] += 1
       else
-        categories["🐢 Very Slow (> 1s)"] += 1
+        categories['🐢 Very Slow (> 1s)'] += 1
       end
     end
 
@@ -157,32 +163,32 @@ class SlowSpecFormatter
 
     puts "\n🛡️ \e[34mTest Suite Stability:\e[0m"
     puts "Total Tests: #{total_tests}"
-    puts "\e[32m✅ Passed: #{passed} (#{(passed.to_f/total_tests*100).round(2)}%)\e[0m"
-    puts "\e[31m❌ Failed: #{failed} (#{(failed.to_f/total_tests*100).round(2)}%)\e[0m"
-    puts "\e[33m⏳ Pending: #{pending} (#{(pending.to_f/total_tests*100).round(2)}%)\e[0m"
+    puts "\e[32m✅ Passed: #{passed} (#{(passed.to_f / total_tests * 100).round(2)}%)\e[0m"
+    puts "\e[31m❌ Failed: #{failed} (#{(failed.to_f / total_tests * 100).round(2)}%)\e[0m"
+    puts "\e[33m⏳ Pending: #{pending} (#{(pending.to_f / total_tests * 100).round(2)}%)\e[0m"
   end
 
   def execution_time_variance(sorted_examples)
     run_times = sorted_examples.map { |ex| ex[:run_time] }
     mean = run_times.sum / run_times.size
-    variance = run_times.map { |time| (time - mean) ** 2 }.sum / run_times.size
+    variance = run_times.map { |time| (time - mean)**2 }.sum / run_times.size
     std_dev = Math.sqrt(variance)
 
     puts "\n📈 \e[35mExecution Time Variance:\e[0m"
-    puts "Mean Execution Time: #{sprintf('%.4f', mean)} seconds"
-    puts "Variance: #{sprintf('%.4f', variance)} seconds²"
-    puts "Standard Deviation: #{sprintf('%.4f', std_dev)} seconds"
+    puts "Mean Execution Time: #{format('%.4f', mean)} seconds"
+    puts "Variance: #{format('%.4f', variance)} seconds²"
+    puts "Standard Deviation: #{format('%.4f', std_dev)} seconds"
   end
 
   def temporal_complexity_analysis(sorted_examples)
     sorted_by_complexity = sorted_examples.sort_by { |ex| ex[:run_time] }
 
     puts "\n🧩 \e[32mTemporal Complexity Analysis:\e[0m"
-    puts "Top 3 Most Complex Tests:"
+    puts 'Top 3 Most Complex Tests:'
     sorted_by_complexity.first(3).each_with_index do |ex, index|
       puts "#{index + 1}. #{ex[:description]}"
       puts "   File: #{ex[:file_path]}"
-      puts "   Execution Time: #{sprintf('%.4f', ex[:run_time])} seconds"
+      puts "   Execution Time: #{format('%.4f', ex[:run_time])} seconds"
     end
   end
 
@@ -195,19 +201,19 @@ class SlowSpecFormatter
 
       puts "Potential Dependency Group: #{file}"
       puts "Number of Tests: #{tests.size}"
-      puts "Average Execution Time: #{sprintf('%.4f', tests.map { |t| t[:run_time] }.sum / tests.size)} seconds"
+      puts "Average Execution Time: #{format('%.4f', tests.map { |t| t[:run_time] }.sum / tests.size)} seconds"
     end
   end
 
   def send_to_api(sorted_examples)
     uri = URI.parse(@watchdog_api_url)
     http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = (uri.scheme == "https")
+    http.use_ssl = (uri.scheme == 'https')
 
     batch_size = 30
     sorted_examples.each_slice(batch_size) do |batch|
       puts "🌐 Sending batch of #{batch.size} to Analytics API"
-
+      timestamp = Time.now.to_i
       batch_payload = batch.map do |example|
         {
           description: example[:description],
@@ -215,14 +221,16 @@ class SlowSpecFormatter
           location: example[:location],
           run_time: example[:run_time],
           status: example[:status],
-          error_message: example[:error_message]
-        }
+          error_message: example[:error_message],
+          timestamp: timestamp,
+          flaky: example[:flaky]
+        }.merge(@flaky_spec_detection ? { flaky: example[:flaky] } : {})
       end
 
       request = Net::HTTP::Post.new(uri.path, {
-        "Content-Type" => "application/json",
-        "Authorization" => @watchdog_api_token
-      })
+                                      'Content-Type' => 'application/json',
+                                      'Authorization' => @watchdog_api_token
+                                    })
       request.body = { metrics: batch_payload }.to_json
 
       begin
