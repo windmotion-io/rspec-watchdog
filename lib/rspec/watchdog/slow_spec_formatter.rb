@@ -8,6 +8,7 @@ class SlowSpecFormatter
   def initialize(output)
     @output = output
     @show_logs = Rspec::Watchdog.config.show_logs
+    @flaky_spec_detection = Rspec.config.flaky_spec_detection
     @watchdog_api_url = Rspec::Watchdog.config.watchdog_api_url
     @watchdog_api_token = Rspec::Watchdog.config.watchdog_api_token
   end
@@ -25,6 +26,7 @@ class SlowSpecFormatter
         run_time: example.execution_result.run_time,
         status: example.execution_result.status.to_s,
         error_message: example.execution_result.exception ? example.execution_result.exception.message : nil,
+        flaky: example.metadata[:flaky].presence || false
       }
     end
 
@@ -207,7 +209,7 @@ class SlowSpecFormatter
     batch_size = 30
     sorted_examples.each_slice(batch_size) do |batch|
       puts "🌐 Sending batch of #{batch.size} to Analytics API"
-
+      timestamp = Time.now.to_i
       batch_payload = batch.map do |example|
         {
           description: example[:description],
@@ -215,8 +217,9 @@ class SlowSpecFormatter
           location: example[:location],
           run_time: example[:run_time],
           status: example[:status],
-          error_message: example[:error_message]
-        }
+          error_message: example[:error_message],
+          timestamp: timestamp
+        }.merge(@flaky_spec_detection ? { flaky: example[:flaky] } : {})
       end
 
       request = Net::HTTP::Post.new(uri.path, {

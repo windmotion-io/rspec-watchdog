@@ -52,6 +52,12 @@ end
 RSpec.configure do |config|
   config.add_formatter(:progress)
   config.add_formatter(SlowSpecFormatter)
+
+  # To enable flaky test detection, add the following:
+  config.flaky_spec_detection = true
+  config.flaky_test_callback = proc do |example|
+    example.metadata[:flaky] = true
+  end
 end
 ```
 
@@ -121,7 +127,7 @@ end
 
 ## Integration with RSpec-Rebound
 
-RspecWatchdog integrates with rspec-rebound to track flaky tests. By enabling both gems in your project, you can easily spot tests that fail inconsistently, making it easier to identify root causes and improve the stability of your test suite.
+RspecWatchdog integrates with rspec-rebound(see the [rspec-rebound README](https://github.com/windmotion-io/rspec-rebound)) to track flaky tests. By enabling both gems in your project, you can easily spot tests that fail inconsistently, making it easier to identify root causes and improve the stability of your test suite.
 
 ## Contributing
 
