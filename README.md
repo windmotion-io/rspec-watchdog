@@ -47,6 +47,7 @@ Rspec::Watchdog.configure do |config|
   # Set these only if using the dashboard integration
   # config.watchdog_api_url = "http://your-app.com/watchdog/analytics"
   # config.watchdog_api_token = "your_secret_token"
+  # config.fast_specs_threshold = 1.0 # in seconds to filter unflaky fast specs
 end
 
 RSpec.configure do |config|
@@ -83,6 +84,11 @@ This token is used to validate that the request being sent to the API is legitim
 
 - If you're running tests in a CI/CD environment (e.g., GitHub Actions or CircleCI)
 - Should match the token configured in your dashboard instance
+
+#### `fast_specs_threshold` (Optional)
+
+This threshold is used to filter out unflaky fast specs.
+The idea is to focus on slow and flaky specs.
 
 ## Usage
 
@@ -138,3 +144,7 @@ We welcome contributions to RspecWatchdog! If you have ideas, suggestions, or fi
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+## Credits
+
+RspecWatchdog is maintained by [Windmotion](https://windmotion.io) with the help of our [contributors](https://github.com/windmotion-io/rspec-watchdog/graphs/contributors).

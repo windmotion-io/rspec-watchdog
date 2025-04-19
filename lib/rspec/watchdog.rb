@@ -17,7 +17,7 @@ module Rspec
     end
 
     class Configuration
-      attr_accessor :show_logs, :watchdog_api_url, :watchdog_api_token
+      attr_accessor :show_logs, :watchdog_api_url, :watchdog_api_token, :fast_specs_threshold
     end
   end
 end

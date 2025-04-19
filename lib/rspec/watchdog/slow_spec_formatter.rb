@@ -11,12 +11,13 @@ class SlowSpecFormatter
     @flaky_spec_detection = RSpec.configuration.flaky_spec_detection
     @watchdog_api_url = Rspec::Watchdog.config.watchdog_api_url
     @watchdog_api_token = Rspec::Watchdog.config.watchdog_api_token
+    @fast_specs_threshold = RSpec.configuration.fast_specs_threshold
   end
 
   def dump_summary(summary)
-    return unless @show_logs
-
-    puts "\nAll examples sorted by run time (most durable to fastest):"
+    if @show_logs
+      puts "\nAll examples sorted by run time (most durable to fastest):"
+    end
 
     all_examples = summary.examples.map do |example|
       {
@@ -30,24 +31,30 @@ class SlowSpecFormatter
       }
     end
 
+    if @fast_specs_threshold
+      all_examples = all_examples.select { |ex| ex[:run_time] > @fast_specs_threshold && !ex[:flaky] }
+    end
+
     sorted_examples = all_examples.sort_by { |ex| -ex[:run_time] }
 
     sorted_examples.each do |ex|
       puts "#{ex[:description]} (#{ex[:file_path]}) - #{ex[:run_time]} seconds - #{ex[:location]}"
     end
 
-    calculate_average_time(summary)
-    fastest_test(sorted_examples)
-    slowest_test(sorted_examples)
-    percentiles(sorted_examples)
-    failed_tests(summary)
-    tests_grouped_by_file(sorted_examples)
-    tests_that_tooked_longer_than(sorted_examples, 2.0)
-    time_distribution_analysis(sorted_examples)
-    test_stability_analysis(summary)
-    execution_time_variance(sorted_examples)
-    temporal_complexity_analysis(sorted_examples)
-    test_dependency_analysis(sorted_examples)
+    if @show_logs
+      calculate_average_time(summary)
+      fastest_test(sorted_examples)
+      slowest_test(sorted_examples)
+      percentiles(sorted_examples)
+      failed_tests(summary)
+      tests_grouped_by_file(sorted_examples)
+      tests_that_tooked_longer_than(sorted_examples, 2.0)
+      time_distribution_analysis(sorted_examples)
+      test_stability_analysis(summary)
+      execution_time_variance(sorted_examples)
+      temporal_complexity_analysis(sorted_examples)
+      test_dependency_analysis(sorted_examples)
+    end
 
     return unless @watchdog_api_url && @watchdog_api_token
 
